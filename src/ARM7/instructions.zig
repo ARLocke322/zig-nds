@@ -1,3 +1,4 @@
+const std = @import("std");
 const Cpu = @import("ARM7TDMI.zig").ARM7TDMI;
 const decoder = @import("arm_decoder.zig");
 const helpers = @import("arm_helpers.zig");
@@ -42,3 +43,29 @@ pub const AND = packed struct(u21) {
         }
     }
 };
+
+test "AND r1, r2, r3" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF00FF00);
+    cpu.r[3].set(0x0F0F0F0F);
+    cpu.execute(0xE0021003);
+    try std.testing.expectEqual(@as(u32, 0x0F000F00), cpu.r[1].get());
+}
+
+test "ANDS sets Z flag on zero result" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF00FF00);
+    cpu.r[3].set(0x00FF00FF);
+    cpu.execute(0xE0121003);
+    try std.testing.expectEqual(@as(u32, 0), cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.Z);
+}
+
+test "ANDS sets C flag on shift carry" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF00FF00);
+    cpu.r[3].set(0xFF0F0F0F);
+    cpu.execute(0xE0121183); // ANDS r1, r2, r3, LSL #3
+    try std.testing.expectEqual(@as(u32, 0xF8007800), cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.C);
+}

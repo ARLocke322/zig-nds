@@ -10,3 +10,11 @@ pub fn main() !void {
     cpu.r[3].set(0x0F0F0F0F);
     cpu.execute(0xE0021003);
 }
+
+test {
+    _ = @import("ARM7/arm_decoder.zig");
+    _ = @import("ARM7/arm_helpers.zig");
+    _ = @import("ARM7/instructions.zig");
+    _ = @import("ARM7/ARM7TDMI.zig");
+    _ = @import("ARM7/register.zig");
+}
