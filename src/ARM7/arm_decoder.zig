@@ -5,6 +5,7 @@ const types = @import("arm_types.zig");
 pub fn decodeInstruction(opcode: u7, operand: u21) types.Instruction {
     return switch (opcode) {
         0x00 => .{ .AND = @bitCast(operand) },
+        0x01 => .{ .EOR = @bitCast(operand) },
         else => unreachable,
     };
 }

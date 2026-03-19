@@ -1,10 +1,42 @@
 const std = @import("std");
 const types = @import("arm_types.zig");
+const Cpu = @import("ARM7TDMI.zig").ARM7TDMI;
+const decoder = @import("arm_decoder.zig");
 
-pub fn getShifted(current: u32, shift_t: types.ShiftType, shift_n: u8, carry_in: u1) struct {
+pub const ShiftResult = struct {
     value: u32,
     carry: u1,
-} {
+};
+
+pub fn getShiftResult(
+    cpu: *Cpu,
+    register_shifted_register: bool,
+    type_code: u2,
+    imm5: u5,
+    current: u32,
+) ShiftResult {
+    if (register_shifted_register) {
+        cpu.tick();
+        const shift_params = decoder.decodeRegShift(type_code);
+        const Rs: u4 = @truncate(imm5 >> 1);
+        return getShifted(
+            current,
+            shift_params.shift_t,
+            @truncate(cpu.r[Rs].get()),
+            @bitCast(cpu.CPSR.C),
+        );
+    } else {
+        const shift_params = decoder.decodeImmShift(type_code, imm5);
+        return getShifted(
+            current,
+            shift_params.shift_t,
+            shift_params.shift_n,
+            @bitCast(cpu.CPSR.C),
+        );
+    }
+}
+
+pub fn getShifted(current: u32, shift_t: types.ShiftType, shift_n: u8, carry_in: u1) ShiftResult {
     if (shift_n == 0 or (shift_n == 32 and shift_t == .ROR))
         return .{ .value = current, .carry = carry_in };
     return switch (shift_t) {
@@ -39,10 +71,13 @@ pub fn getShifted(current: u32, shift_t: types.ShiftType, shift_n: u8, carry_in:
             };
         },
         .ROR => {
+            if (shift_n % 32 == 0) return .{
+                .value = current,
+                .carry = @truncate(current >> 31),
+            };
             return .{
-                .value = (current >> @intCast(shift_n % 32)) |
-                    (current << @intCast(32 - (shift_n % 32))),
-                .carry = carry_in,
+                .value = std.math.rotr(u32, current, @as(u32, shift_n)),
+                .carry = @truncate(current >> @intCast(shift_n % 32 - 1)),
             };
         },
     };
