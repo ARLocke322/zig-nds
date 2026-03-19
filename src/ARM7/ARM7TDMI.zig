@@ -64,6 +64,17 @@ pub fn setFlags(self: *ARM7TDMI, opts: struct {
     if (opts.N) |N| self.CPSR.N = N;
 }
 
+// === TESTS ===
+pub fn execute(self: *ARM7TDMI, instruction: u32) void {
+    const opcode: u7 = @truncate(instruction >> 21);
+    const operand: u21 = @truncate(instruction);
+    const instr = decoder.decodeInstruction(opcode, operand);
+
+    return switch (instr) {
+        inline else => |op| op.execute(self),
+    };
+}
+
 test "setFlags only changes specified flags" {
     var cpu = ARM7TDMI.init();
     cpu.CPSR.V = true;

@@ -13,29 +13,45 @@ pub const AND = packed struct(u21) {
     S: bool,
 
     pub fn execute(self: AND, cpu: *Cpu) void {
-        const shift_result = blk: {
-            if (self.register_shifted_register) {
-                cpu.tick();
-                const shift_params = decoder.decodeRegShift(self.type_code);
-                const Rs: u4 = @truncate(self.imm5 >> 1);
-                break :blk helpers.getShifted(
-                    cpu.r[self.Rm].get(),
-                    shift_params.shift_t,
-                    @truncate(cpu.r[Rs].get()),
-                    @bitCast(cpu.CPSR.C),
-                );
-            } else {
-                const shift_params = decoder.decodeImmShift(self.type_code, self.imm5);
-                break :blk helpers.getShifted(
-                    cpu.r[self.Rm].get(),
-                    shift_params.shift_t,
-                    shift_params.shift_n,
-                    @bitCast(cpu.CPSR.C),
-                );
-            }
-        };
+        const shift_result = helpers.getShiftResult(
+            cpu,
+            self.register_shifted_register,
+            self.type_code,
+            self.imm5,
+            cpu.r[self.Rm].get(),
+        );
 
         const result = cpu.r[self.Rn].get() & shift_result.value;
+        cpu.r[self.Rd].set(result);
+
+        if (self.S) {
+            cpu.setFlags(.{
+                .C = shift_result.carry == 1,
+                .Z = result == 0,
+            });
+        }
+    }
+};
+
+pub const EOR = packed struct(u21) {
+    Rm: u4,
+    register_shifted_register: bool,
+    type_code: u2,
+    imm5: u5,
+    Rd: u4,
+    Rn: u4,
+    S: bool,
+
+    pub fn execute(self: EOR, cpu: *Cpu) void {
+        const shift_result = helpers.getShiftResult(
+            cpu,
+            self.register_shifted_register,
+            self.type_code,
+            self.imm5,
+            cpu.r[self.Rm].get(),
+        );
+
+        const result = cpu.r[self.Rn].get() ^ shift_result.value;
         cpu.r[self.Rd].set(result);
 
         if (self.S) {
@@ -70,5 +86,29 @@ test "ANDS sets C flag on shift carry" {
     cpu.r[3].set(0xFF0F0F0F);
     cpu.execute(0xE0121183); // ANDS r1, r2, r3, LSL #3
     try std.testing.expectEqual(@as(u32, 0xF8007800), cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.C);
+}
+
+test "EOR r1, r2, r3" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF00FF00);
+    cpu.r[3].set(0x0F0F0F0F);
+    cpu.execute(0xE0221003);
+    try std.testing.expectEqual(@as(u32, 0xF00FF00F), cpu.r[1].get());
+}
+test "EORS sets Z flag on zero result" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFFFFFFFF);
+    cpu.r[3].set(0xFFFFFFFF);
+    cpu.execute(0xE0321003);
+    try std.testing.expectEqual(@as(u32, 0), cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.Z);
+}
+test "EORS sets C flag on shift carry" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF00FF00);
+    cpu.r[3].set(0xFF0F0F0F);
+    cpu.execute(0xE0321183);
+    try std.testing.expectEqual(@as(u32, 0x07788778), cpu.r[1].get());
     try std.testing.expect(cpu.CPSR.C);
 }
