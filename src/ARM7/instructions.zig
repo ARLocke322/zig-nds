@@ -21,6 +21,7 @@ pub const AND = packed struct(u21) {
                     cpu.r[self.Rm].get(),
                     shift_params.shift_t,
                     @truncate(cpu.r[Rs].get()),
+                    @bitCast(cpu.CPSR.C),
                 );
             } else {
                 const shift_params = decoder.decodeImmShift(self.type_code, self.imm5);
@@ -28,6 +29,7 @@ pub const AND = packed struct(u21) {
                     cpu.r[self.Rm].get(),
                     shift_params.shift_t,
                     shift_params.shift_n,
+                    @bitCast(cpu.CPSR.C),
                 );
             }
         };
@@ -37,7 +39,7 @@ pub const AND = packed struct(u21) {
 
         if (self.S) {
             cpu.setFlags(.{
-                .C = if (shift_result.carry) |c| c == 1 else null,
+                .C = shift_result.carry == 1,
                 .Z = result == 0,
             });
         }
