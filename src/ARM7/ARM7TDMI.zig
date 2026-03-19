@@ -1,7 +1,8 @@
 const Register = @import("register.zig").Register;
 pub const ARM7TDMI = @This();
 const std = @import("std");
-const decode = @import("decode.zig");
+const decoder = @import("arm_decoder.zig");
+const types = @import("arm_types.zig");
 
 r: [16]Register,
 
@@ -26,9 +27,16 @@ pub fn init() ARM7TDMI {
 }
 
 pub fn execute(self: *ARM7TDMI, instruction: u32) void {
-    const instr: decode.AND = decode.decode(@truncate(instruction));
+    const opcode: u7 = @truncate(instruction >> 21);
+    const operand: u21 = @truncate(instruction);
+    const instr: types.Instruction = decoder.decodeInstruction(opcode, operand);
+
     self.debugPrint();
-    instr.execute(self);
+
+    switch (instr) {
+        inline else => |op| op.execute(self),
+    }
+
     self.debugPrint();
 }
 
