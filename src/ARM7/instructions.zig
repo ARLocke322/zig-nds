@@ -15,6 +15,7 @@ pub const AND = packed struct(u21) {
     pub fn execute(self: AND, cpu: *Cpu) void {
         const shift_result = blk: {
             if (self.register_shifted_register) {
+                cpu.tick();
                 const shift_params = decoder.decodeRegShift(self.type_code);
                 const Rs: u4 = @truncate(self.imm5 >> 1);
                 break :blk helpers.getShifted(

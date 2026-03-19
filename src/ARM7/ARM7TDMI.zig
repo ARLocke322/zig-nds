@@ -18,6 +18,8 @@ CPSR: packed struct(u32) {
     N: bool,
 },
 
+cycle_counter: u32 = 0,
+
 pub fn init() ARM7TDMI {
     const val: u32 = 0;
     return .{
@@ -26,18 +28,28 @@ pub fn init() ARM7TDMI {
     };
 }
 
-pub fn execute(self: *ARM7TDMI, instruction: u32) void {
+pub fn step(self: *ARM7TDMI) void {
+    const instruction = self.fetch();
+
     const opcode: u7 = @truncate(instruction >> 21);
     const operand: u21 = @truncate(instruction);
-    const instr: types.Instruction = decoder.decodeInstruction(opcode, operand);
+    const instr = decoder.decodeInstruction(opcode, operand);
 
-    // self.debugPrint();
-
-    switch (instr) {
+    return switch (instr) {
         inline else => |op| op.execute(self),
-    }
+    };
+}
 
-    // self.debugPrint();
+pub fn tick(self: *ARM7TDMI) void {
+    self.cycle_counter +%= 1;
+}
+
+pub fn fetch(self: *ARM7TDMI) u32 {
+    const pc = self.r[15].get();
+    self.cycle_counter +%= 1;
+    const instruction = 0xE0021413;
+    self.r[15].set(pc + 4);
+    return instruction;
 }
 
 pub fn setFlags(self: *ARM7TDMI, opts: struct {
@@ -50,24 +62,6 @@ pub fn setFlags(self: *ARM7TDMI, opts: struct {
     if (opts.C) |C| self.CPSR.C = C;
     if (opts.Z) |Z| self.CPSR.Z = Z;
     if (opts.N) |N| self.CPSR.N = N;
-}
-
-// Only for debugging
-
-fn debugPrint(cpu: *ARM7TDMI) void {
-    std.debug.print("Registers:\n", .{});
-    for (0..16) |i| {
-        std.debug.print("  r{d:<2} = 0x{x:0>8}\n", .{ i, cpu.r[i].get() });
-    }
-    std.debug.print("CPSR: 0x{x:0>8} [N={d} Z={d} C={d} V={d} T={d} M=0b{b:0>5}]\n", .{
-        @as(u32, @bitCast(cpu.CPSR)),
-        @intFromBool(cpu.CPSR.N),
-        @intFromBool(cpu.CPSR.Z),
-        @intFromBool(cpu.CPSR.C),
-        @intFromBool(cpu.CPSR.V),
-        @intFromBool(cpu.CPSR.thumb),
-        cpu.CPSR.mode,
-    });
 }
 
 test "setFlags only changes specified flags" {
