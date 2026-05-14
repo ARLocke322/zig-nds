@@ -8,6 +8,8 @@ pub const ShiftResult = struct {
     carry: u1,
 };
 
+pub fn expandImm12(imm12: u12) u32 {}
+
 pub fn getShiftResult(
     cpu: *Cpu,
     register_shifted_register: bool,

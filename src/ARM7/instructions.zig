@@ -63,6 +63,38 @@ pub const EOR = packed struct(u21) {
     }
 };
 
+pub const SUB = packed struct(u21) {
+    Rm: u4,
+    register_shifted_register: bool,
+    type_code: u2,
+    imm5: u5,
+    Rd: u4,
+    Rn: u4,
+    S: bool,
+
+    pub fn execute(self: SUB, cpu: *Cpu) void {
+        const shift_result = helpers.getShiftResult(
+            cpu,
+            self.register_shifted_register,
+            self.type_code,
+            self.imm5,
+            cpu.r[self.Rm].get(),
+        );
+
+        const result = @subWithOverflow(cpu.r[self.Rn].get(), shift_result.value);
+        cpu.r[self.Rd].set(result[0]);
+
+        if (self.S) {
+            cpu.setFlags(.{
+                .V = result[1] == 1,
+                .C = cpu.r[self.Rn].get() >= shift_result.value,
+                .Z = result[0] == 0,
+                .N = result[0] >> 31 == 1,
+            });
+        }
+    }
+};
+
 test "AND r1, r2, r3" {
     var cpu = Cpu.init();
     cpu.r[2].set(0xFF00FF00);
@@ -112,3 +144,8 @@ test "EORS sets C flag on shift carry" {
     try std.testing.expectEqual(@as(u32, 0x07788778), cpu.r[1].get());
     try std.testing.expect(cpu.CPSR.C);
 }
+test "SUB r1, r2, r3" {}
+test "SUBS sets V flag on overflow" {}
+test "SUBS sets C flag on borrow" {}
+test "SUBS sets Z flag on zero result" {}
+test "SUBS sets N flag on negative result" {}
