@@ -98,14 +98,43 @@ pub const SUB = packed struct(u21) {
 };
 
 pub const RSB = packed struct(u21) {
-    blank: u21,
+    Rm: u4,
+    register_shifted_register: bool,
+    type_code: u2,
+    imm5: u5,
+    Rd: u4,
+    Rn: u4,
+    S: bool,
 
     pub fn execute(self: RSB, cpu: *Cpu) void {
-        _ = self;
-        _ = cpu;
+        const shift_result = helpers.getShiftResult(
+            cpu,
+            self.register_shifted_register,
+            self.type_code,
+            self.imm5,
+            cpu.r[self.Rm].get(),
+        );
+
+        const rn = cpu.r[self.Rn].get();
+        const op1 = shift_result.value;
+        const result = op1 -% rn;
+        cpu.r[self.Rd].set(result);
+
+        if (self.S) {
+            cpu.setFlags(.{
+                // operands have different signs, result has different sign to op1
+                .V = (op1 ^ rn) & (op1 ^ result) >> 31 & 1 == 1,
+                .C = op1 >= rn,
+                .Z = result == 0,
+                .N = result >> 31 == 1,
+            });
+        }
     }
 };
 
+// === TESTS ===
+
+// AND(S)
 test "AND r1, r2, r3" {
     var cpu = Cpu.init();
     cpu.r[2].set(0xFF00FF00);
@@ -113,7 +142,6 @@ test "AND r1, r2, r3" {
     cpu.execute(0xE0021003);
     try std.testing.expectEqual(0x0F000F00, cpu.r[1].get());
 }
-
 test "ANDS sets Z flag on zero result" {
     var cpu = Cpu.init();
     cpu.r[2].set(0xFF00FF00);
@@ -122,7 +150,6 @@ test "ANDS sets Z flag on zero result" {
     try std.testing.expectEqual(0, cpu.r[1].get());
     try std.testing.expect(cpu.CPSR.Z);
 }
-
 test "ANDS sets C flag on shift carry" {
     var cpu = Cpu.init();
     cpu.r[2].set(0xFF00FF00);
@@ -132,6 +159,7 @@ test "ANDS sets C flag on shift carry" {
     try std.testing.expect(cpu.CPSR.C);
 }
 
+// EOR(S)
 test "EOR r1, r2, r3" {
     var cpu = Cpu.init();
     cpu.r[2].set(0xFF00FF00);
@@ -155,6 +183,8 @@ test "EORS sets C flag on shift carry" {
     try std.testing.expectEqual(0x07788778, cpu.r[1].get());
     try std.testing.expect(cpu.CPSR.C);
 }
+
+// SUB(S)
 test "SUB r1, r2, r3" {
     var cpu = Cpu.init();
     cpu.r[2].set(0xFF00FF00);
