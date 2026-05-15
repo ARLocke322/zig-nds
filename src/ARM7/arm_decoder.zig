@@ -3,28 +3,28 @@ const instructions = @import("instructions.zig");
 const types = @import("arm_types.zig");
 
 pub fn decodeInstruction(opcode: u7, operand: u21) types.Instruction {
-    const b20: u1 = @truncate(operand >> 20);
+    // const b20: u1 = @truncate(operand >> 20);
     return switch (opcode) {
         0x00 => .{ .AND = @bitCast(operand) },
         0x01 => .{ .EOR = @bitCast(operand) },
         0x02 => .{ .SUB = @bitCast(operand) },
         0x03 => .{ .RSB = @bitCast(operand) },
-        0x04 => .{ .ADD = @bitCast(operand) },
-        0x05 => .{ .ADC = @bitCast(operand) },
-        0x06 => .{ .SBC = @bitCast(operand) },
-        0x07 => .{ .RSC = @bitCast(operand) },
-        0x08 => if (b20 == 1)
-            .{ .TST = @bitCast(operand) },
-        0x09 => if (b20 == 1)
-            .{ .TEQ = @bitCast(operand) },
-        0x0A => if (b20 == 1)
-            .{ .CMP = @bitCast(operand) },
-        0x0B => if (b20 == 1)
-            .{ .CMN = @bitCast(operand) },
-        0x0C => .{ .ORR = @bitCast(operand) },
-        0x0D => .{ .MOV_or_shift = @bitCast(operand) },
-        0x0E => .{ .BIC = @bitCast(operand) },
-        0x0F => .{ .NOT = @bitCast(operand) },
+        // 0x04 => .{ .ADD = @bitCast(operand) },
+        // 0x05 => .{ .ADC = @bitCast(operand) },
+        // 0x06 => .{ .SBC = @bitCast(operand) },
+        // 0x07 => .{ .RSC = @bitCast(operand) },
+        // 0x08 => if (b20 == 1)
+        // .{ .TST = @bitCast(operand) },
+        // 0x09 => if (b20 == 1)
+        // .{ .TEQ = @bitCast(operand) },
+        // 0x0A => if (b20 == 1)
+        // .{ .CMP = @bitCast(operand) },
+        // 0x0B => if (b20 == 1)
+        // .{ .CMN = @bitCast(operand) },
+        // 0x0C => .{ .ORR = @bitCast(operand) },
+        // 0x0D => .{ .MOV_or_shift = @bitCast(operand) },
+        // 0x0E => .{ .BIC = @bitCast(operand) },
+        // 0x0F => .{ .NOT = @bitCast(operand) },
         else => unreachable,
     };
 }

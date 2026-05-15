@@ -5,4 +5,6 @@ pub const ShiftType = enum { LSL, LSR, ASR, RRX, ROR };
 pub const Instruction = union(enum) {
     AND: instructions.AND,
     EOR: instructions.EOR,
+    SUB: instructions.SUB,
+    RSB: instructions.RSB,
 };
