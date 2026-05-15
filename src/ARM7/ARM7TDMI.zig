@@ -65,6 +65,7 @@ pub fn setFlags(self: *ARM7TDMI, opts: struct {
 }
 
 // === TESTS ===
+
 pub fn execute(self: *ARM7TDMI, instruction: u32) void {
     const opcode: u7 = @truncate(instruction >> 21);
     const operand: u21 = @truncate(instruction);
