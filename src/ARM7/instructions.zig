@@ -224,3 +224,44 @@ test "SUBS sets N flag on negative result" {
     try std.testing.expectEqual(0xFFFFFFFF, cpu.r[1].get());
     try std.testing.expect(cpu.CPSR.N);
 }
+
+// RSB(S)
+test "RSUB r1, r2, r3" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF000000);
+    cpu.r[3].set(0xFF00FF00);
+    cpu.execute(0xE0621003);
+    try std.testing.expectEqual(0x0000FF00, cpu.r[1].get());
+}
+test "RSBS sets V flag on overflow" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x00000001);
+    cpu.r[3].set(0x80000000);
+    cpu.execute(0xE0721003);
+    try std.testing.expectEqual(0x7FFFFFFF, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.V);
+}
+test "RSBS sets C flag to 0 on borrow" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x00000002);
+    cpu.r[3].set(0x00000001);
+    cpu.execute(0xE0721003);
+    try std.testing.expectEqual(0xFFFFFFFF, cpu.r[1].get());
+    try std.testing.expect(!cpu.CPSR.C);
+}
+test "RSBS sets Z flag on zero result" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x00000001);
+    cpu.r[3].set(0x00000001);
+    cpu.execute(0xE0721003);
+    try std.testing.expectEqual(0x00000000, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.Z);
+}
+test "RSBS sets N flag on negative result" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x00000001);
+    cpu.r[3].set(0x00000000);
+    cpu.execute(0xE0721003);
+    try std.testing.expectEqual(0xFFFFFFFF, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.N);
+}
