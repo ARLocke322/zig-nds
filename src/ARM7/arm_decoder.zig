@@ -9,7 +9,7 @@ pub fn decodeInstruction(opcode: u7, operand: u21) types.Instruction {
         0x01 => .{ .EOR = @bitCast(operand) },
         0x02 => .{ .SUB = @bitCast(operand) },
         0x03 => .{ .RSB = @bitCast(operand) },
-        // 0x04 => .{ .ADD = @bitCast(operand) },
+        0x04 => .{ .ADD = @bitCast(operand) },
         // 0x05 => .{ .ADC = @bitCast(operand) },
         // 0x06 => .{ .SBC = @bitCast(operand) },
         // 0x07 => .{ .RSC = @bitCast(operand) },
