@@ -7,4 +7,5 @@ pub const Instruction = union(enum) {
     EOR: instructions.EOR,
     SUB: instructions.SUB,
     RSB: instructions.RSB,
+    ADD: instructions.ADD,
 };
