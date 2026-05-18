@@ -158,7 +158,7 @@ pub const ADD = packed struct(u21) {
         if (self.S) {
             cpu.setFlags(.{
                 // operands have same signs, result has different sign
-                .V = (rn ^ result[0]) & (op2 ^ result[0]) >> 31 & 1 == 1,
+                .V = ((rn ^ result[0]) & (op2 ^ result[0])) >> 31 == 1,
                 .C = result[1] == 1,
                 .Z = result[0] == 0,
                 .N = result[0] >> 31 == 1,
@@ -167,6 +167,41 @@ pub const ADD = packed struct(u21) {
     }
 };
 
+pub const ADC = packed struct(u21) {
+    Rm: u4,
+    register_shifted_register: bool,
+    type_code: u2,
+    imm5: u5,
+    Rd: u4,
+    Rn: u4,
+    S: bool,
+
+    pub fn execute(self: ADC, cpu: *Cpu) void {
+        const shift_result = helpers.getShiftResult(
+            cpu,
+            self.register_shifted_register,
+            self.type_code,
+            self.imm5,
+            cpu.r[self.Rm].get(),
+        );
+
+        const rn = cpu.r[self.Rn].get();
+        const op2 = shift_result.value;
+        const result1 = @addWithOverflow(rn, op2);
+        const result2 = @addWithOverflow(result1[0], @intFromBool(cpu.CPSR.C));
+        cpu.r[self.Rd].set(result2[0]);
+
+        if (self.S) {
+            cpu.setFlags(.{
+                // operands have same signs, result has different sign
+                .V = ((rn ^ result2[0]) & (op2 ^ result2[0])) >> 31 == 1,
+                .C = result1[1] == 1 or result2[1] == 1,
+                .Z = result2[0] == 0,
+                .N = result2[0] >> 31 == 1,
+            });
+        }
+    }
+};
 // === TESTS ===
 
 // AND(S)
@@ -338,6 +373,57 @@ test "ADDS sets N flag on negative result" {
     cpu.r[2].set(0x00000001);
     cpu.r[3].set(0xFFFFFFFE);
     cpu.execute(0xE0921003);
+    try std.testing.expectEqual(0xFFFFFFFF, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.N);
+}
+
+// ADC(S)
+test "ADC r1, r2, r3 (no carry)" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF000000);
+    cpu.r[3].set(0x0000FF00);
+    cpu.execute(0xE0A21003);
+    try std.testing.expectEqual(0xFF00FF00, cpu.r[1].get());
+}
+test "ADC r1, r2, r3 (with carry)" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFF000000);
+    cpu.r[3].set(0x0000FF00);
+    cpu.CPSR.C = true;
+    cpu.execute(0xE0A21003);
+    try std.testing.expectEqual(0xFF00FF01, cpu.r[1].get());
+}
+test "ADCS sets V flag on signed overflow via carry" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x7FFFFFFF);
+    cpu.r[3].set(0x00000000);
+    cpu.CPSR.C = true;
+    cpu.execute(0xE0B21003);
+    try std.testing.expectEqual(0x80000000, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.V);
+}
+test "ADCS sets C flag on unsigned overflow via carry" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0xFFFFFFFF);
+    cpu.r[3].set(0x00000000);
+    cpu.CPSR.C = true;
+    cpu.execute(0xE0B21003);
+    try std.testing.expectEqual(0x00000000, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.C);
+}
+test "ADCS sets Z flag on zero result" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x00000000);
+    cpu.r[3].set(0x00000000);
+    cpu.execute(0xE0B21003);
+    try std.testing.expectEqual(0x00000000, cpu.r[1].get());
+    try std.testing.expect(cpu.CPSR.Z);
+}
+test "ADCS sets N flag on negative result" {
+    var cpu = Cpu.init();
+    cpu.r[2].set(0x00000001);
+    cpu.r[3].set(0xFFFFFFFE);
+    cpu.execute(0xE0B21003);
     try std.testing.expectEqual(0xFFFFFFFF, cpu.r[1].get());
     try std.testing.expect(cpu.CPSR.N);
 }
