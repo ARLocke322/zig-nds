@@ -8,4 +8,5 @@ pub const Instruction = union(enum) {
     SUB: instructions.SUB,
     RSB: instructions.RSB,
     ADD: instructions.ADD,
+    ADC: instructions.ADC,
 };

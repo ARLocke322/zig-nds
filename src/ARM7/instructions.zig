@@ -158,7 +158,7 @@ pub const ADD = packed struct(u21) {
         if (self.S) {
             cpu.setFlags(.{
                 // operands have same signs, result has different sign
-                .V = (rn ^ result[0]) & (op2 ^ result[0]) >> 31 & 1 == 1,
+                .V = ((rn ^ result[0]) & (op2 ^ result[0])) >> 31 == 1,
                 .C = result[1] == 1,
                 .Z = result[0] == 0,
                 .N = result[0] >> 31 == 1,
@@ -167,6 +167,41 @@ pub const ADD = packed struct(u21) {
     }
 };
 
+pub const ADC = packed struct(u21) {
+    Rm: u4,
+    register_shifted_register: bool,
+    type_code: u2,
+    imm5: u5,
+    Rd: u4,
+    Rn: u4,
+    S: bool,
+
+    pub fn execute(self: ADC, cpu: *Cpu) void {
+        const shift_result = helpers.getShiftResult(
+            cpu,
+            self.register_shifted_register,
+            self.type_code,
+            self.imm5,
+            cpu.r[self.Rm].get(),
+        );
+
+        const rn = cpu.r[self.Rn].get();
+        const op2 = shift_result.value;
+        const result1 = @addWithOverflow(rn, op2);
+        const result2 = @addWithOverflow(result1[0], @intFromBool(cpu.CPSR.C));
+        cpu.r[self.Rd].set(result2[0]);
+
+        if (self.S) {
+            cpu.setFlags(.{
+                // operands have same signs, result has different sign
+                .V = ((rn ^ result2[0]) & (op2 ^ result2[0])) >> 31 == 1,
+                .C = result1[1] == 1 or result2[1] == 1,
+                .Z = result2[0] == 0,
+                .N = result2[0] >> 31 == 1,
+            });
+        }
+    }
+};
 // === TESTS ===
 
 // AND(S)
